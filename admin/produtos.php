@@ -16,15 +16,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $imagem = $_FILES['imagem'];
     
     // Upload da imagem
-    $target_dir = "uploads/";
-    $target_file = $target_dir . time() . '_' . basename($imagem["name"]);
+    $target_dir = __DIR__ . "/uploads/"; // Caminho absoluto para o diretório de uploads
     
-    // Verificar se o diretório existe
+    // Criar diretório se não existir
     if (!file_exists($target_dir)) {
-        $erro = "O diretório de upload não existe.";
+        mkdir($target_dir, 0777, true);
     }
+    
+    $target_file = $target_dir . time() . '_' . basename($imagem["name"]);
+    $relative_path = "uploads/" . time() . '_' . basename($imagem["name"]); // Caminho relativo para o banco de dados
+    
     // Verificar se o arquivo é uma imagem
-    else if (!getimagesize($imagem["tmp_name"])) {
+    if (!getimagesize($imagem["tmp_name"])) {
         $erro = "O arquivo selecionado não é uma imagem válida.";
     }
     // Verificar tamanho do arquivo (máximo 5MB)
@@ -40,15 +43,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $erro = "Erro ao fazer upload da imagem. Verifique as permissões do diretório.";
     }
     else {
-        // Inserir no banco de dados
-        $stmt = $conn->prepare("INSERT INTO produtos (nome, descricao, preco, imagem) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssds", $nome, $descricao, $preco, $target_file);
-        
-        if ($stmt->execute()) {
-            header('Location: produtos.php?success=1');
-            exit();
+        // Verificar conexão com o banco de dados
+        if ($conn->connect_error) {
+            $erro = "Erro na conexão com o banco de dados: " . $conn->connect_error;
         } else {
-            $erro = "Erro ao cadastrar o produto.";
+            // Inserir no banco de dados
+            $stmt = $conn->prepare("INSERT INTO produtos (nome, descricao, preco, imagem) VALUES (?, ?, ?, ?)");
+            if (!$stmt) {
+                $erro = "Erro ao preparar a query: " . $conn->error;
+            } else {
+                $stmt->bind_param("ssds", $nome, $descricao, $preco, $relative_path);
+                
+                if ($stmt->execute()) {
+                    header('Location: produtos.php?success=1');
+                    exit();
+                } else {
+                    $erro = "Erro ao cadastrar o produto: " . $stmt->error;
+                }
+            }
         }
     }
 }
