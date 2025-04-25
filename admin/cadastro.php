@@ -2,44 +2,24 @@
 require_once '../config/database.php';
 session_start();
 
-// Função para verificar se o usuário está logado
-function isLoggedIn() {
-    return isset($_SESSION['admin_id']);
-}
-
-// Função para fazer logout
-function logout() {
-    session_destroy();
-    header('Location: login.php');
-    exit();
-}
-
-// Processar logout
-if (isset($_GET['logout'])) {
-    logout();
-}
-
-// Processar login
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
+// Processar cadastro
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cadastro'])) {
+    $nome = $_POST['nome'];
     $email = $_POST['email'];
     $senha = $_POST['senha'];
+    $confirmar_senha = $_POST['confirmar_senha'];
     
-    try {
-        $pdo = getConnection();
-        $stmt = $pdo->prepare("SELECT * FROM administradores WHERE email = ?");
-        $stmt->execute([$email]);
-        $admin = $stmt->fetch();
-        
-        if ($admin && password_verify($senha, $admin['senha'])) {
-            $_SESSION['admin_id'] = $admin['id'];
-            $_SESSION['admin_nome'] = $admin['nome'];
-            header('Location: index.php');
-            exit();
-        } else {
-            $login_error = "Email ou senha incorretos";
+    if ($senha !== $confirmar_senha) {
+        $cadastro_error = "As senhas não coincidem";
+    } else {
+        try {
+            $pdo = getConnection();
+            $stmt = $pdo->prepare("INSERT INTO administradores (nome, email, senha) VALUES (?, ?, ?)");
+            $stmt->execute([$nome, $email, password_hash($senha, PASSWORD_DEFAULT)]);
+            $cadastro_success = "Cadastro realizado com sucesso!";
+        } catch(PDOException $e) {
+            $cadastro_error = "Erro ao cadastrar: " . $e->getMessage();
         }
-    } catch(PDOException $e) {
-        $login_error = "Erro ao fazer login: " . $e->getMessage();
     }
 }
 ?>
@@ -49,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Admin</title>
+    <title>Cadastro - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -86,13 +66,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <div class="container">
         <div class="card">
             <div class="card-header">
-                <h4 class="mb-0">Login</h4>
+                <h4 class="mb-0">Cadastro</h4>
             </div>
             <div class="card-body">
-                <?php if (isset($login_error)): ?>
-                    <div class="alert alert-danger"><?php echo $login_error; ?></div>
+                <?php if (isset($cadastro_error)): ?>
+                    <div class="alert alert-danger"><?php echo $cadastro_error; ?></div>
+                <?php endif; ?>
+                <?php if (isset($cadastro_success)): ?>
+                    <div class="alert alert-success"><?php echo $cadastro_success; ?></div>
                 <?php endif; ?>
                 <form method="POST">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
                         <input type="email" class="form-control" id="email" name="email" required>
@@ -101,10 +88,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                         <label for="senha" class="form-label">Senha</label>
                         <input type="password" class="form-control" id="senha" name="senha" required>
                     </div>
-                    <button type="submit" name="login" class="btn btn-primary w-100">Entrar</button>
+                    <div class="mb-3">
+                        <label for="confirmar_senha" class="form-label">Confirmar Senha</label>
+                        <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" required>
+                    </div>
+                    <button type="submit" name="cadastro" class="btn btn-primary w-100">Cadastrar</button>
                 </form>
                 <div class="text-center mt-3">
-                    <a href="cadastro.php" class="text-decoration-none">Não tem uma conta? Cadastre-se</a>
+                    <a href="login.php" class="text-decoration-none">Já tem uma conta? Faça login</a>
                 </div>
             </div>
         </div>

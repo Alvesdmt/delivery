@@ -1,134 +1,226 @@
 <?php
-require_once '../config/database.php';
-session_start();
+require_once 'includes/layout.php';
+?>
 
-if (!isset($_SESSION['admin_logado'])) {
-    header('Location: /admin/login');
-    exit;
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Atualiza o título da página
+    document.querySelector('h1').textContent = 'Dashboard';
+    
+    // Atualiza o conteúdo dos cards
+    const cards = document.querySelectorAll('.card');
+    
+    // Card de Estatísticas
+    cards[0].innerHTML = `
+        <h3>Estatísticas</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <i class="fas fa-shopping-cart"></i>
+                <div class="stat-info">
+                    <span class="stat-value">150</span>
+                    <span class="stat-label">Pedidos</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-users"></i>
+                <div class="stat-info">
+                    <span class="stat-value">1.2k</span>
+                    <span class="stat-label">Clientes</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-box"></i>
+                <div class="stat-info">
+                    <span class="stat-value">324</span>
+                    <span class="stat-label">Produtos</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <i class="fas fa-dollar-sign"></i>
+                <div class="stat-info">
+                    <span class="stat-value">R$ 45k</span>
+                    <span class="stat-label">Receita</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Card de Atividades Recentes
+    cards[1].innerHTML = `
+        <h3>Atividades Recentes</h3>
+        <div class="activities-list">
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+                <div class="activity-details">
+                    <p>Novo pedido #12345</p>
+                    <small>Há 5 minutos</small>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div class="activity-details">
+                    <p>Novo cliente cadastrado</p>
+                    <small>Há 15 minutos</small>
+                </div>
+            </div>
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fas fa-truck"></i>
+                </div>
+                <div class="activity-details">
+                    <p>Pedido #12344 enviado</p>
+                    <small>Há 30 minutos</small>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Card de Tarefas
+    cards[2].innerHTML = `
+        <h3>Tarefas</h3>
+        <div class="tasks-list">
+            <div class="task-item">
+                <input type="checkbox" id="task1">
+                <label for="task1">Revisar novos pedidos</label>
+            </div>
+            <div class="task-item">
+                <input type="checkbox" id="task2">
+                <label for="task2">Atualizar estoque</label>
+            </div>
+            <div class="task-item">
+                <input type="checkbox" id="task3">
+                <label for="task3">Responder mensagens</label>
+            </div>
+            <div class="task-item">
+                <input type="checkbox" id="task4">
+                <label for="task4">Preparar relatório mensal</label>
+            </div>
+        </div>
+    `;
+});
+</script>
+
+<style>
+/* Estilos para as estatísticas */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
 }
 
-// Buscar estatísticas
-$pedidos = $pdo->query("SELECT COUNT(*) as total FROM pedidos")->fetch()['total'];
-$produtos = $pdo->query("SELECT COUNT(*) as total FROM produtos")->fetch()['total'];
-$clientes = $pdo->query("SELECT COUNT(*) as total FROM clientes")->fetch()['total'];
-$pedidos_pendentes = $pdo->query("SELECT COUNT(*) as total FROM pedidos WHERE status = 'pendente'")->fetch()['total'];
-?>
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/admin/dashboard">Admin</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/dashboard">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/produtos">Produtos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/pedidos">Pedidos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/clientes">Clientes</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/logout">Sair</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+.stat-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
-    <div class="container mt-4">
-        <h2>Dashboard</h2>
-        <div class="row mt-4">
-            <div class="col-md-3 mb-4">
-                <div class="card bg-primary text-white">
-                    <div class="card-body">
-                        <h5 class="card-title">Total de Pedidos</h5>
-                        <h2><?php echo $pedidos; ?></h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-4">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
-                        <h5 class="card-title">Produtos</h5>
-                        <h2><?php echo $produtos; ?></h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-4">
-                <div class="card bg-info text-white">
-                    <div class="card-body">
-                        <h5 class="card-title">Clientes</h5>
-                        <h2><?php echo $clientes; ?></h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-4">
-                <div class="card bg-warning text-white">
-                    <div class="card-body">
-                        <h5 class="card-title">Pedidos Pendentes</h5>
-                        <h2><?php echo $pedidos_pendentes; ?></h2>
-                    </div>
-                </div>
-            </div>
-        </div>
+.stat-item i {
+    font-size: 24px;
+    color: var(--primary-color);
+}
 
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Últimos Pedidos</h5>
-                    </div>
-                    <div class="card-body">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Cliente</th>
-                                    <th>Status</th>
-                                    <th>Data</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                $stmt = $pdo->query("SELECT p.*, c.nome as cliente_nome 
-                                                    FROM pedidos p 
-                                                    JOIN clientes c ON p.cliente_id = c.id 
-                                                    ORDER BY p.data DESC LIMIT 5");
-                                while ($pedido = $stmt->fetch()) {
-                                ?>
-                                <tr>
-                                    <td><?php echo $pedido['id']; ?></td>
-                                    <td><?php echo $pedido['cliente_nome']; ?></td>
-                                    <td><?php echo $pedido['status']; ?></td>
-                                    <td><?php echo date('d/m/Y H:i', strtotime($pedido['data'])); ?></td>
-                                </tr>
-                                <?php } ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html> 
+.stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Estilos para atividades recentes */
+.activities-list {
+    margin-top: 15px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    background: #f0f2f5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+}
+
+.activity-details p {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.activity-details small {
+    color: #666;
+    font-size: 12px;
+}
+
+/* Estilos para tarefas */
+.tasks-list {
+    margin-top: 15px;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.task-item label {
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
