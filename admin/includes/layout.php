@@ -177,24 +177,9 @@
             padding: 0 30px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-end;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             z-index: 100;
-        }
-
-        .search-bar {
-            flex: 1;
-            max-width: 500px;
-            margin: 0 20px;
-        }
-
-        .search-bar input {
-            width: 100%;
-            padding: 10px 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: var(--border-radius);
-            background: #f5f6f8;
-            font-size: 14px;
         }
 
         .user-menu {
@@ -203,14 +188,79 @@
             gap: 15px;
         }
 
+        .notifications {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .notifications i {
+            font-size: 20px;
+            color: #666;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 300px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+
+        .notification-dropdown.active {
+            display: block;
+        }
+
+        .notification-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .notification-item:hover {
+            background: #f5f6f8;
+        }
+
+        .notification-item.unread {
+            background: #f0f7ff;
+        }
+
+        .notification-time {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
         .user-avatar {
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: #e0e0e0;
+            background: var(--primary-color);
             display: flex;
             align-items: center;
             justify-content: center;
+            cursor: pointer;
+        }
+
+        .user-avatar i {
+            color: white;
+            font-size: 18px;
         }
 
         /* Cards e Grids */
@@ -313,10 +363,6 @@
             .header, .footer {
                 left: 0;
             }
-
-            .search-bar {
-                display: none;
-            }
         }
     </style>
 </head>
@@ -355,16 +401,21 @@
 
     <!-- Header -->
     <header class="header">
-        <div class="search-bar">
-            <input type="text" placeholder="Pesquisar...">
-        </div>
         <div class="user-menu">
-            <div class="notifications">
+            <div class="notifications" id="notificationIcon">
                 <i class="far fa-bell"></i>
+                <span class="notification-badge" id="notificationBadge">0</span>
+                <div class="notification-dropdown" id="notificationDropdown">
+                    <div id="notificationList">
+                        <div class="notification-item">
+                            <div>Nenhuma notificação</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="user-avatar">
+            <a href="configuracoes" class="user-avatar">
                 <i class="fas fa-user"></i>
-            </div>
+            </a>
         </div>
     </header>
 
@@ -385,12 +436,62 @@
     </footer>
 
     <script>
-        // Adicione seus scripts JavaScript aqui
         document.addEventListener('DOMContentLoaded', function() {
-            // Exemplo de funcionalidade para toggle do sidebar em dispositivos móveis
-            const toggleSidebar = () => {
-                document.querySelector('.sidebar').classList.toggle('active');
-            };
+            const notificationIcon = document.getElementById('notificationIcon');
+            const notificationDropdown = document.getElementById('notificationDropdown');
+            const notificationBadge = document.getElementById('notificationBadge');
+
+            // Função para atualizar notificações
+            function updateNotifications() {
+                fetch('includes/notifications.php?action=get')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.count > 0) {
+                            notificationBadge.textContent = data.count;
+                            notificationBadge.style.display = 'block';
+                            
+                            // Atualizar lista de notificações
+                            const notificationList = document.getElementById('notificationList');
+                            notificationList.innerHTML = '';
+                            
+                            data.notifications.forEach(notification => {
+                                const item = document.createElement('div');
+                                item.className = 'notification-item' + (notification.read ? '' : ' unread');
+                                item.innerHTML = `
+                                    <div>${notification.message}</div>
+                                    <div class="notification-time">${notification.time}</div>
+                                `;
+                                notificationList.appendChild(item);
+                            });
+                        } else {
+                            notificationBadge.style.display = 'none';
+                            const notificationList = document.getElementById('notificationList');
+                            notificationList.innerHTML = '<div class="notification-item"><div>Nenhuma notificação</div></div>';
+                        }
+                    });
+            }
+
+            // Atualizar notificações a cada 30 segundos
+            setInterval(updateNotifications, 30000);
+
+            // Toggle do dropdown de notificações
+            notificationIcon.addEventListener('click', function(e) {
+                e.stopPropagation();
+                notificationDropdown.classList.toggle('active');
+                if (notificationDropdown.classList.contains('active')) {
+                    // Marcar notificações como lidas quando o dropdown é aberto
+                    fetch('includes/notifications.php?action=mark_read')
+                        .then(() => updateNotifications());
+                }
+            });
+
+            // Fechar dropdown ao clicar fora
+            document.addEventListener('click', function() {
+                notificationDropdown.classList.remove('active');
+            });
+
+            // Atualizar notificações ao carregar a página
+            updateNotifications();
         });
     </script>
 </body>
