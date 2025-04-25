@@ -324,30 +324,30 @@
     <!-- Sidebar -->
     <nav class="sidebar">
         <div class="sidebar-logo">
-            <img src="../assets/images/logo.png" alt="Logo">
-            <h2>Admin Panel</h2>
+            <img src="uploads/logo.png" alt="Logo">
+            <h2>Admin Painel</h2>
         </div>
         
-        <a href="#" class="nav-item active">
+        <a href="index" class="nav-item active">
             <i class="fas fa-home"></i>
             <span>Dashboard</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="produtos" class="nav-item">
             <i class="fas fa-box"></i>
             <span>Produtos</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="clientes" class="nav-item">
             <i class="fas fa-users"></i>
             <span>Clientes</span>
         </a>
 
         <div class="nav-separator"></div>
 
-        <a href="#" class="nav-item">
+        <a href="relatorios" class="nav-item">
             <i class="fas fa-chart-bar"></i>
             <span>Relatórios</span>
         </a>
-        <a href="#" class="nav-item">
+        <a href="configuracoes" class="nav-item">
             <i class="fas fa-cog"></i>
             <span>Configurações</span>
         </a>
@@ -368,46 +368,7 @@
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <h1>Dashboard</h1>
-        
-        <!-- Quick Access -->
-        <div class="quick-access">
-            <div class="quick-access-item">
-                <i class="fas fa-image"></i>
-                <span>Imagens</span>
-            </div>
-            <div class="quick-access-item">
-                <i class="fas fa-file"></i>
-                <span>Documentos</span>
-            </div>
-            <div class="quick-access-item">
-                <i class="fas fa-download"></i>
-                <span>Downloads</span>
-            </div>
-            <div class="quick-access-item">
-                <i class="fas fa-plus"></i>
-                <span>Adicionar</span>
-            </div>
-        </div>
-
-        <!-- Grid Container -->
-        <div class="grid-container">
-            <div class="card">
-                <h3>Estatísticas</h3>
-                <!-- Conteúdo do card -->
-            </div>
-            <div class="card">
-                <h3>Atividades Recentes</h3>
-                <!-- Conteúdo do card -->
-            </div>
-            <div class="card">
-                <h3>Tarefas</h3>
-                <!-- Conteúdo do card -->
-            </div>
-        </div>
-    </main>
+    
 
     <!-- Footer -->
     <footer class="footer">
