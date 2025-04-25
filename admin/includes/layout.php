@@ -382,6 +382,10 @@
             <i class="fas fa-box"></i>
             <span>Produtos</span>
         </a>
+        <a href="pedidos" class="nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Pedidos</span>
+        </a>
         <a href="clientes" class="nav-item">
             <i class="fas fa-users"></i>
             <span>Clientes</span>

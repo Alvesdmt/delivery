@@ -14,6 +14,11 @@ function addNotification($message) {
     ];
 }
 
+// Função para adicionar notificação de novo pedido
+function addNewOrderNotification($pedidoId) {
+    addNotification("Novo pedido #" . str_pad($pedidoId, 6, '0', STR_PAD_LEFT) . " recebido!");
+}
+
 // Função para obter notificações não lidas
 function getUnreadNotifications() {
     if (!isset($_SESSION['notifications'])) {
@@ -36,7 +41,7 @@ function markNotificationsAsRead() {
 // Verificar se há novos pedidos
 function checkNewOrders() {
     global $db;
-    $newOrders = $db->query("SELECT COUNT(*) as count FROM pedidos WHERE status = 'novo'")->fetch_assoc();
+    $newOrders = $db->query("SELECT COUNT(*) as count FROM pedidos WHERE status = 'pendente'")->fetch_assoc();
     return $newOrders['count'] > 0;
 }
 

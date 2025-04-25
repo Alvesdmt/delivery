@@ -22,18 +22,122 @@ $total = 0;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/style.css">
     <style>
+        :root {
+            --ifood-red: #ea1d2c;
+            --ifood-gray: #f7f7f7;
+            --ifood-dark: #3f3e3e;
+            --ifood-green: #2ecc71;
+        }
+
+        body {
+            background-color: var(--ifood-gray);
+        }
+
         .produto-item {
             transition: all 0.3s ease;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 1rem;
+            padding: 1rem;
         }
+
         .produto-item:hover {
-            background-color: #f8f9fa;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
         }
+
         .img-thumbnail {
-            border: 1px solid #dee2e6;
-            padding: 0.25rem;
-            background-color: #fff;
-            border-radius: 0.25rem;
-            max-width: 100%;
+            border: none;
+            border-radius: 8px;
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--ifood-green);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #27ae60;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-secondary {
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-danger {
+            background-color: transparent;
+            color: var(--ifood-red);
+            border: none;
+            padding: 8px;
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(234, 29, 44, 0.1);
+        }
+
+        h1 {
+            color: var(--ifood-dark);
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            color: var(--ifood-dark);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        .alert-info {
+            background-color: #e8f4f8;
+            border: none;
+            border-radius: 8px;
+            color: var(--ifood-dark);
+        }
+
+        .container {
+            max-width: 1200px;
+            padding: 2rem 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .img-thumbnail {
+                width: 80px;
+                height: 80px;
+            }
         }
     </style>
 </head>
@@ -74,7 +178,7 @@ $total = 0;
                                 <strong>Total:</strong>
                                 <strong id="total">R$ 5,00</strong>
                             </div>
-                            <a href="checkout.php" class="btn btn-primary w-100">Finalizar Pedido</a>
+                            <button type="button" class="btn btn-primary w-100" onclick="irParaCheckout()">Finalizar Pedido</button>
                         </div>
                     </div>
                 </div>
@@ -205,6 +309,36 @@ $total = 0;
             carrinho = carrinho.filter(i => i.id !== produtoId);
             localStorage.setItem('carrinho', JSON.stringify(carrinho));
             location.reload();
+        }
+
+        function irParaCheckout() {
+            const carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
+            if (carrinho.length === 0) {
+                alert('Seu carrinho está vazio. Adicione produtos antes de finalizar o pedido.');
+                return;
+            }
+
+            // Verifica se todos os itens têm quantidade válida
+            const itensInvalidos = carrinho.some(item => !item.quantidade || item.quantidade <= 0);
+            if (itensInvalidos) {
+                alert('Existem itens com quantidade inválida no carrinho. Por favor, corrija antes de continuar.');
+                return;
+            }
+
+            // Verifica se o usuário está logado
+            fetch('verificar_login.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logado) {
+                        window.location.href = 'checkout.php';
+                    } else {
+                        window.location.href = 'login.php?redirect=checkout';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao verificar login:', error);
+                    alert('Erro ao verificar seu login. Por favor, tente novamente.');
+                });
         }
     </script>
 </body>

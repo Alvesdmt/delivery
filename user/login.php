@@ -4,7 +4,7 @@ session_start();
 
 // Se o usuário já estiver logado, redireciona para a página inicial
 if (isset($_SESSION['cliente_logado'])) {
-    header('Location: user/carrinho');
+    header('Location: carrinho');
     exit;
 }
 
@@ -12,46 +12,64 @@ $erro = '';
 
 // Processar o formulário de login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $telefone = $_POST['telefone'] ?? '';
-    
-    // Validar telefone
-    if (empty($telefone)) {
-        $erro = 'Por favor, informe seu telefone';
+    // Validação CSRF
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        $erro = 'Token de segurança inválido';
     } else {
-        try {
-            $pdo = getConnection();
-            
-            // Verificar se o cliente já existe
-            $stmt = $pdo->prepare("SELECT id, telefone FROM clientes WHERE telefone = ?");
-            $stmt->execute([$telefone]);
-            $cliente = $stmt->fetch();
-            
-            if ($cliente) {
-                // Cliente existe, fazer login
-                $_SESSION['cliente_logado'] = true;
-                $_SESSION['cliente_id'] = $cliente['id'];
-                $_SESSION['cliente_telefone'] = $cliente['telefone'];
+        $telefone = filter_input(INPUT_POST, 'telefone', FILTER_SANITIZE_STRING);
+        $nome = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_STRING);
+
+        // Validação básica
+        if (empty($telefone) || strlen($telefone) < 10) {
+            $erro = 'Telefone inválido';
+        } else {
+            try {
+                $pdo = getConnection();
                 
-                header('Location: /');
-                exit;
-            } else {
-                // Cliente não existe, criar novo
-                $stmt = $pdo->prepare("INSERT INTO clientes (nome, email, telefone, created_at) VALUES ('Cliente', 'cliente@email.com', ?, NOW())");
+                // Verifica se o cliente já existe
+                $stmt = $pdo->prepare("SELECT * FROM clientes WHERE telefone = ?");
                 $stmt->execute([$telefone]);
-                
-                $id = $pdo->lastInsertId();
-                
-                $_SESSION['cliente_logado'] = true;
-                $_SESSION['cliente_id'] = $id;
-                $_SESSION['cliente_telefone'] = $telefone;
-                
-                header('Location: /');
-                exit;
+                $cliente = $stmt->fetch();
+
+                if ($cliente) {
+                    // Cliente existe, faz login
+                    $_SESSION['cliente_logado'] = true;
+                    $_SESSION['cliente_id'] = $cliente['id'];
+                    $_SESSION['cliente_nome'] = $cliente['nome'];
+                    $_SESSION['cliente_telefone'] = $cliente['telefone'];
+                } else {
+                    // Validação do nome para novo usuário
+                    if (empty($nome) || strlen($nome) < 3) {
+                        $erro = 'Nome inválido';
+                    } else {
+                        // Cliente novo, cadastra
+                        $stmt = $pdo->prepare("
+                            INSERT INTO clientes (nome, telefone) 
+                            VALUES (?, ?)
+                        ");
+                        $stmt->execute([$nome, $telefone]);
+
+                        $_SESSION['cliente_logado'] = true;
+                        $_SESSION['cliente_id'] = $pdo->lastInsertId();
+                        $_SESSION['cliente_nome'] = $nome;
+                        $_SESSION['cliente_telefone'] = $telefone;
+                    }
+                }
+
+                if (empty($erro)) {
+                    header('Location: carrinho');
+                    exit;
+                }
+            } catch (PDOException $e) {
+                $erro = "Erro ao processar login/cadastro: " . $e->getMessage();
             }
-        } catch (PDOException $e) {
-            $erro = 'Erro ao processar login: ' . $e->getMessage();
         }
     }
+}
+
+// Gera token CSRF
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 ?>
 <!DOCTYPE html>
@@ -61,71 +79,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Delivery</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .login-container {
-            max-width: 400px;
-            margin: 100px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .login-header i {
-            font-size: 3rem;
-            color: #0d6efd;
-        }
-    </style>
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="login-container">
-            <div class="login-header">
-                <i class="bi bi-person-circle"></i>
-                <h2 class="mt-3">Login</h2>
-                <p class="text-muted">Digite seu telefone para continuar</p>
-            </div>
-            
-            <?php if ($erro): ?>
-                <div class="alert alert-danger"><?php echo $erro; ?></div>
-            <?php endif; ?>
-            
-            <form method="POST" action="">
-                <div class="mb-3">
-                    <label for="telefone" class="form-label">Telefone</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                        <input type="tel" class="form-control" id="telefone" name="telefone" 
-                               placeholder="(00) 00000-0000" required>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">Entrar / Cadastrar</h3>
+                        
+                        <?php if (!empty($erro)): ?>
+                            <div class="alert alert-danger"><?php echo htmlspecialchars($erro); ?></div>
+                        <?php endif; ?>
+
+                        <form method="POST" id="loginForm">
+                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                            <div class="mb-3">
+                                <label for="telefone" class="form-label">Telefone</label>
+                                <input type="tel" class="form-control" id="telefone" name="telefone" 
+                                       required placeholder="(00) 00000-0000">
+                            </div>
+                            
+                            <div class="mb-3" id="nomeField" style="display: none;">
+                                <label for="nome" class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="nome" name="nome" 
+                                       placeholder="Seu nome completo">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">Continuar</button>
+                        </form>
                     </div>
                 </div>
-                
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-box-arrow-in-right"></i> Entrar
-                </button>
-            </form>
-            
-            <div class="text-center mt-3">
-                <a href="/" class="text-decoration-none">
-                    <i class="bi bi-arrow-left"></i> Voltar para a página inicial
-                </a>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
     <script>
-        $(document).ready(function(){
-            $('#telefone').mask('(00) 00000-0000');
+        document.getElementById('telefone').addEventListener('blur', async function() {
+            const telefone = this.value.replace(/\D/g, '');
+            if (telefone.length >= 10) {
+                // Verifica se o telefone já existe
+                const response = await fetch(`verificar_telefone.php?telefone=${telefone}`);
+                const data = await response.json();
+                
+                const nomeField = document.getElementById('nomeField');
+                const nomeInput = document.getElementById('nome');
+                
+                if (!data.exists) {
+                    // Novo usuário, mostra campo de nome
+                    nomeField.style.display = 'block';
+                    nomeInput.required = true;
+                } else {
+                    // Usuário existente, esconde campo de nome
+                    nomeField.style.display = 'none';
+                    nomeInput.required = false;
+                }
+            }
+        });
+
+        // Máscara para o telefone
+        document.getElementById('telefone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+                value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+                value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+                e.target.value = value;
+            }
         });
     </script>
 </body>

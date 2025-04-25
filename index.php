@@ -218,8 +218,62 @@ $pdo = getConnection();
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .floating-cart {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: #0d6efd;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        .floating-cart:hover {
+            background-color: #0b5ed7;
+            transform: scale(1.1);
+            color: white;
+        }
+        .floating-cart .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+        }
+    </style>
+    <a href="user/carrinho" class="floating-cart">
+        <i class="bi bi-cart3" style="font-size: 1.5rem;"></i>
+        <span id="floating-cart-count" class="badge bg-danger" style="display: none;">0</span>
+    </a>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Inicializa o contador do carrinho
+            function atualizarContadorCarrinho() {
+                const carrinho = JSON.parse(localStorage.getItem('carrinho')) || [];
+                const totalItens = carrinho.reduce((total, item) => total + item.quantidade, 0);
+                
+                const contadorMenu = document.getElementById('contador-carrinho');
+                const contadorFlutuante = document.getElementById('floating-cart-count');
+                
+                if (contadorMenu) {
+                    contadorMenu.style.display = totalItens > 0 ? 'inline' : 'none';
+                    contadorMenu.textContent = totalItens;
+                }
+                
+                if (contadorFlutuante) {
+                    contadorFlutuante.style.display = totalItens > 0 ? 'inline' : 'none';
+                    contadorFlutuante.textContent = totalItens;
+                }
+            }
+
+            // Chama a função ao carregar a página
+            atualizarContadorCarrinho();
+
             const buscaInput = document.getElementById('busca');
             const ordenarSelect = document.getElementById('ordenar');
             const listaProdutos = document.getElementById('lista-produtos');
@@ -289,11 +343,18 @@ $pdo = getConnection();
             alert('Produto adicionado ao carrinho!');
             
             // Atualiza o contador do carrinho
-            const contador = document.getElementById('contador-carrinho');
-            if (contador) {
-                const totalItens = carrinho.reduce((total, item) => total + item.quantidade, 0);
-                contador.style.display = totalItens > 0 ? 'inline' : 'none';
-                contador.textContent = totalItens;
+            const contadorMenu = document.getElementById('contador-carrinho');
+            const contadorFlutuante = document.getElementById('floating-cart-count');
+            const totalItens = carrinho.reduce((total, item) => total + item.quantidade, 0);
+            
+            if (contadorMenu) {
+                contadorMenu.style.display = totalItens > 0 ? 'inline' : 'none';
+                contadorMenu.textContent = totalItens;
+            }
+            
+            if (contadorFlutuante) {
+                contadorFlutuante.style.display = totalItens > 0 ? 'inline' : 'none';
+                contadorFlutuante.textContent = totalItens;
             }
         }
     </script>
