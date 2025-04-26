@@ -426,11 +426,22 @@ require_once 'includes/layout.php';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Configuração do WebSocket
+        const ws = new WebSocket('ws://localhost:8080');
+        
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'pedido_atualizado') {
+                atualizarDashboard();
+            }
+        };
+
         // Função para atualizar os dados do dashboard
         function atualizarDashboard() {
             fetch('atualizar_dashboard.php')
                 .then(response => response.json())
                 .then(data => {
+                    // Atualizar os cards
                     document.getElementById('total-hoje').textContent = data.total_hoje;
                     document.getElementById('total-pendentes').textContent = data.total_pendentes;
                     document.getElementById('total-processando').textContent = data.total_processando;
@@ -439,11 +450,49 @@ require_once 'includes/layout.php';
                     
                     // Atualizar a data/hora da última atualização
                     document.querySelector('.text-muted').textContent = 'Atualizado em: ' + new Date().toLocaleString('pt-BR');
+
+                    // Atualizar a tabela de pedidos
+                    if (data.pedidos) {
+                        const tbody = document.querySelector('table tbody');
+                        tbody.innerHTML = '';
+                        
+                        data.pedidos.forEach(pedido => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>#${pedido.id}</td>
+                                <td>${pedido.cliente_nome}</td>
+                                <td>${new Date(pedido.data).toLocaleString('pt-BR')}</td>
+                                <td>R$ ${pedido.total.toFixed(2).replace('.', ',')}</td>
+                                <td>${pedido.forma_pagamento.charAt(0).toUpperCase() + pedido.forma_pagamento.slice(1)}</td>
+                                <td>
+                                    <span class="status-badge status-${pedido.status.toLowerCase()}">
+                                        ${pedido.status.charAt(0).toUpperCase() + pedido.status.slice(1)}
+                                    </span>
+                                </td>
+                                <td class="action-buttons">
+                                    <a href="detalhes_pedido.php?id=${pedido.id}" 
+                                       class="btn btn-sm btn-primary" 
+                                       title="Ver detalhes">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success" 
+                                            title="Atualizar status"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#statusModal"
+                                            data-pedido-id="${pedido.id}">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
                 })
                 .catch(error => console.error('Erro ao atualizar dashboard:', error));
         }
 
-        // Atualizar a cada 30 segundos
+        // Atualizar a cada 30 segundos como fallback
         setInterval(atualizarDashboard, 30000);
 
         // Inicializar o modal de status
@@ -471,7 +520,9 @@ require_once 'includes/layout.php';
                 if (data.success) {
                     // Atualizar o dashboard após mudança de status
                     atualizarDashboard();
-                    location.reload();
+                    // Fechar o modal
+                    const modal = bootstrap.Modal.getInstance(statusModal);
+                    modal.hide();
                 } else {
                     alert('Erro ao atualizar status: ' + data.message);
                 }

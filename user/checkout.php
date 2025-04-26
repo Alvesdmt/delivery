@@ -8,49 +8,26 @@ ini_set('display_errors', 1);
 
 // Função para enviar resposta JSON
 function sendJsonResponse($data, $statusCode = 200) {
+    if (headers_sent($filename, $linenum)) {
+        error_log("Headers already sent in $filename on line $linenum");
+        exit;
+    }
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-// Verifica se o usuário está logado
-if (!isset($_SESSION['cliente_logado'])) {
-    sendJsonResponse(['error' => 'Usuário não está logado'], 401);
-}
-
-// Obtém os dados do cliente logado
-try {
-    $pdo = getConnection();
-    $stmt = $pdo->prepare("SELECT * FROM clientes WHERE id = ?");
-    $stmt->execute([$_SESSION['cliente_id']]);
-    $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$cliente) {
-        sendJsonResponse(['error' => 'Cliente não encontrado'], 404);
-    }
-} catch (Exception $e) {
-    error_log("Erro ao buscar cliente: " . $e->getMessage());
-    sendJsonResponse(['error' => 'Erro ao buscar dados do cliente'], 500);
-}
-
-// Verifica se já existe endereço salvo
-$stmt = $pdo->prepare("
-    SELECT endereco, numero, complemento, bairro, cidade, cep 
-    FROM clientes 
-    WHERE id = ?
-");
-$stmt->execute([$_SESSION['cliente_id']]);
-$endereco = $stmt->fetch(PDO::FETCH_ASSOC);
-
-// Gera token CSRF
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-// Processa o formulário quando enviado
+// Se for uma requisição POST, processa antes de qualquer saída HTML
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verifica se o usuário está logado
+    if (!isset($_SESSION['cliente_logado'])) {
+        sendJsonResponse(['error' => 'Usuário não está logado'], 401);
+    }
+
     try {
+        $pdo = getConnection();
+        
         // Validação CSRF
         if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
             sendJsonResponse(['error' => 'Token de segurança inválido'], 403);
@@ -188,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->commit();
         
         // Adiciona notificação de novo pedido
-        require_once '../admin/includes/notifications.php';
+        require_once __DIR__ . '/../admin/includes/notifications.php';
         addNewOrderNotification($pedidoId);
         
         sendJsonResponse(['success' => true, 'pedido_id' => $pedidoId]);
@@ -219,6 +196,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'debug' => $e->getMessage()
         ], 500);
     }
+}
+
+// Verifica se o usuário está logado para exibição da página
+if (!isset($_SESSION['cliente_logado'])) {
+    header('Location: login.php?redirect=checkout');
+    exit;
+}
+
+// Obtém os dados do cliente logado
+try {
+    $pdo = getConnection();
+    $stmt = $pdo->prepare("SELECT * FROM clientes WHERE id = ?");
+    $stmt->execute([$_SESSION['cliente_id']]);
+    $cliente = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$cliente) {
+        header('Location: login.php?error=cliente_nao_encontrado');
+        exit;
+    }
+} catch (Exception $e) {
+    error_log("Erro ao buscar cliente: " . $e->getMessage());
+    header('Location: index.php?error=erro_interno');
+    exit;
+}
+
+// Verifica se já existe endereço salvo
+$stmt = $pdo->prepare("
+    SELECT endereco, numero, complemento, bairro, cidade, cep 
+    FROM clientes 
+    WHERE id = ?
+");
+$stmt->execute([$_SESSION['cliente_id']]);
+$endereco = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Gera token CSRF
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 ?>
 <!DOCTYPE html>
@@ -677,7 +691,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 el.classList.remove('selected');
             });
             event.currentTarget.classList.add('selected');
+            
+            // Atualiza a visibilidade do campo de troco
+            const trocoGroup = document.getElementById('troco-group');
+            const trocoInput = document.getElementById('troco');
+            
+            if (method === 'dinheiro') {
+                trocoGroup.style.display = 'block';
+                trocoInput.required = true;
+            } else {
+                trocoGroup.style.display = 'none';
+                trocoInput.required = false;
+                trocoInput.value = '';
+            }
         }
+
+        // Inicializa o campo de troco baseado na forma de pagamento selecionada
+        document.addEventListener('DOMContentLoaded', function() {
+            const formaPagamentoSelecionada = document.querySelector('input[name="forma_pagamento"]:checked');
+            const trocoGroup = document.getElementById('troco-group');
+            const trocoInput = document.getElementById('troco');
+            
+            if (formaPagamentoSelecionada && formaPagamentoSelecionada.value === 'dinheiro') {
+                trocoGroup.style.display = 'block';
+                trocoInput.required = true;
+            } else {
+                trocoGroup.style.display = 'none';
+                trocoInput.required = false;
+            }
+        });
 
         // Busca endereço pelo CEP
         document.getElementById('cep').addEventListener('blur', function() {

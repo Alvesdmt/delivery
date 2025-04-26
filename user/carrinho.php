@@ -149,7 +149,7 @@ $total = 0;
         <h1 class="mb-4">Meu Carrinho</h1>
         
         <div id="carrinho-vazio" class="alert alert-info" style="display: none;">
-            Seu carrinho está vazio. <a href="/">Voltar para a loja</a>
+            Seu carrinho está vazio. <a href="../index">Voltar para a loja</a>
         </div>
 
         <div id="carrinho-conteudo" style="display: none;">

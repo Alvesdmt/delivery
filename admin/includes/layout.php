@@ -198,53 +198,54 @@
             color: #666;
         }
 
+        .notification-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.3s ease;
+        }
+        
+        .notification-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .notification-item.unread {
+            background-color: #f0f7ff;
+        }
+        
+        .notification-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            white-space: pre-line;
+        }
+        
+        .notification-message {
+            font-weight: 500;
+            color: #333;
+            line-height: 1.4;
+        }
+        
+        .notification-time {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        #notificationList {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
         .notification-badge {
             position: absolute;
             top: -5px;
             right: -5px;
-            background: #ff4444;
+            background-color: #dc3545;
             color: white;
             border-radius: 50%;
             padding: 2px 6px;
-            font-size: 12px;
+            font-size: 0.75rem;
             font-weight: bold;
-        }
-
-        .notification-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            width: 300px;
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            display: none;
-            z-index: 1000;
-        }
-
-        .notification-dropdown.active {
-            display: block;
-        }
-
-        .notification-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .notification-item:hover {
-            background: #f5f6f8;
-        }
-
-        .notification-item.unread {
-            background: #f0f7ff;
-        }
-
-        .notification-time {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
         }
 
         .user-avatar {
@@ -364,6 +365,22 @@
                 left: 0;
             }
         }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 300px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+
+        .notification-dropdown.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -462,9 +479,26 @@
                                 const item = document.createElement('div');
                                 item.className = 'notification-item' + (notification.read ? '' : ' unread');
                                 item.innerHTML = `
-                                    <div>${notification.message}</div>
-                                    <div class="notification-time">${notification.time}</div>
+                                    <div class="notification-content">
+                                        <div class="notification-message">${notification.message}</div>
+                                        <div class="notification-time">${notification.time}</div>
+                                    </div>
                                 `;
+                                
+                                // Adiciona evento de clique para redirecionar
+                                if (notification.redirectUrl) {
+                                    item.style.cursor = 'pointer';
+                                    item.addEventListener('click', function(e) {
+                                        e.stopPropagation(); // Impede que o evento se propague
+                                        // Marca a notificação como lida
+                                        fetch('includes/notifications.php?action=mark_read')
+                                            .then(() => {
+                                                // Redireciona para a página do pedido
+                                                window.location.href = notification.redirectUrl;
+                                            });
+                                    });
+                                }
+                                
                                 notificationList.appendChild(item);
                             });
                         } else {
@@ -490,8 +524,10 @@
             });
 
             // Fechar dropdown ao clicar fora
-            document.addEventListener('click', function() {
-                notificationDropdown.classList.remove('active');
+            document.addEventListener('click', function(e) {
+                if (!notificationIcon.contains(e.target) && !notificationDropdown.contains(e.target)) {
+                    notificationDropdown.classList.remove('active');
+                }
             });
 
             // Atualizar notificações ao carregar a página
