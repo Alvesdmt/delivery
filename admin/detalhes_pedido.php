@@ -23,7 +23,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT p.*, c.nome as cliente_nome, c.email as cliente_email, c.telefone as cliente_telefone
         FROM pedidos p
-        LEFT JOIN clientes c ON p.cliente_id = c.id
+        INNER JOIN clientes c ON p.cliente_id = c.id
         WHERE p.id = ?
     ");
     $stmt->execute([$pedido_id]);

@@ -250,5 +250,230 @@ require_once 'includes/layout.php';
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const reportCards = document.querySelectorAll('.report-card');
+            const dataInicial = document.querySelector('input[placeholder="Data Inicial"]');
+            const dataFinal = document.querySelector('input[placeholder="Data Final"]');
+            const periodoSelect = document.querySelector('select.form-select');
+            const btnFiltrar = document.querySelector('.btn-primary');
+
+            // Função para atualizar datas baseado no período selecionado
+            function atualizarDatasPorPeriodo() {
+                const hoje = new Date();
+                const dataFinal = new Date();
+                let dataInicial = new Date();
+
+                switch(periodoSelect.value) {
+                    case 'hoje':
+                        dataInicial.setHours(0, 0, 0, 0);
+                        break;
+                    case 'semana':
+                        dataInicial.setDate(dataInicial.getDate() - 7);
+                        break;
+                    case 'mes':
+                        dataInicial.setMonth(dataInicial.getMonth() - 1);
+                        break;
+                    case 'ano':
+                        dataInicial.setFullYear(dataInicial.getFullYear() - 1);
+                        break;
+                }
+
+                document.querySelector('input[placeholder="Data Inicial"]').value = dataInicial.toISOString().split('T')[0];
+                document.querySelector('input[placeholder="Data Final"]').value = dataFinal.toISOString().split('T')[0];
+            }
+
+            // Evento para mudança de período
+            periodoSelect.addEventListener('change', atualizarDatasPorPeriodo);
+
+            // Função para carregar relatório
+            function carregarRelatorio(tipo) {
+                const formData = new FormData();
+                formData.append('tipo_relatorio', tipo);
+                formData.append('data_inicial', dataInicial.value);
+                formData.append('data_final', dataFinal.value);
+
+                fetch('processar_relatorios.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    exibirRelatorio(tipo, data);
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar relatório:', error);
+                    alert('Erro ao carregar relatório. Por favor, tente novamente.');
+                });
+            }
+
+            // Função para exibir relatório
+            function exibirRelatorio(tipo, data) {
+                const modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.id = 'modalRelatorio';
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Relatório de ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                ${gerarCabecalhoTabela(tipo)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${gerarCorpoTabela(tipo, data)}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-4">
+                                    <canvas id="graficoRelatorio"></canvas>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                                <button type="button" class="btn btn-primary" onclick="exportarRelatorio('${tipo}')">Exportar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+                const modalInstance = new bootstrap.Modal(modal);
+                modalInstance.show();
+
+                // Remover modal do DOM após fechar
+                modal.addEventListener('hidden.bs.modal', function() {
+                    document.body.removeChild(modal);
+                });
+
+                // Gerar gráfico
+                gerarGrafico(tipo, data);
+            }
+
+            // Função para gerar cabeçalho da tabela
+            function gerarCabecalhoTabela(tipo) {
+                const cabecalhos = {
+                    vendas: ['Data', 'Total de Pedidos', 'Valor Total', 'Valor Médio'],
+                    clientes: ['Nome', 'Email', 'Telefone', 'Total de Pedidos', 'Valor Total Gasto'],
+                    produtos: ['Nome', 'Preço', 'Quantidade Vendida', 'Valor Total'],
+                    financeiro: ['Data', 'Receita Total', 'Valor Cancelamentos', 'Total Cancelamentos', 'Total Pedidos'],
+                    avaliacoes: ['Nota', 'Comentário', 'Cliente', 'Data', 'Total Avaliações', 'Média Geral'],
+                    entregas: ['ID Pedido', 'Data', 'Status', 'Tempo Entrega', 'Cliente', 'Endereço', 'Total Entregas', 'Tempo Médio']
+                };
+
+                return cabecalhos[tipo].map(coluna => `<th>${coluna}</th>`).join('');
+            }
+
+            // Função para gerar corpo da tabela
+            function gerarCorpoTabela(tipo, data) {
+                return data.map(item => {
+                    const linhas = {
+                        vendas: [item.data, item.total_pedidos, item.valor_total, item.valor_medio],
+                        clientes: [item.nome, item.email, item.telefone, item.total_pedidos, item.valor_total_gasto],
+                        produtos: [item.nome, item.preco, item.quantidade_vendida, item.valor_total],
+                        financeiro: [item.data, item.receita_total, item.valor_cancelamentos, item.total_cancelamentos, item.total_pedidos],
+                        avaliacoes: [item.nota, item.comentario, item.cliente_nome, item.data_pedido, item.total_avaliacoes, item.media_geral],
+                        entregas: [item.pedido_id, item.data_pedido, item.status, item.tempo_entrega, item.cliente_nome, item.endereco, item.total_entregas, item.tempo_medio_entrega]
+                    };
+
+                    return `<tr>${linhas[tipo].map(celula => `<td>${celula}</td>`).join('')}</tr>`;
+                }).join('');
+            }
+
+            // Função para gerar gráfico
+            function gerarGrafico(tipo, data) {
+                const ctx = document.getElementById('graficoRelatorio');
+                let config;
+
+                switch(tipo) {
+                    case 'vendas':
+                        config = {
+                            type: 'line',
+                            data: {
+                                labels: data.map(item => item.data),
+                                datasets: [{
+                                    label: 'Valor Total',
+                                    data: data.map(item => item.valor_total),
+                                    borderColor: 'rgb(75, 192, 192)',
+                                    tension: 0.1
+                                }]
+                            }
+                        };
+                        break;
+                    case 'produtos':
+                        config = {
+                            type: 'bar',
+                            data: {
+                                labels: data.map(item => item.nome),
+                                datasets: [{
+                                    label: 'Quantidade Vendida',
+                                    data: data.map(item => item.quantidade_vendida),
+                                    backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                                }]
+                            }
+                        };
+                        break;
+                    case 'avaliacoes':
+                        config = {
+                            type: 'pie',
+                            data: {
+                                labels: data.map(item => `Nota ${item.nota}`),
+                                datasets: [{
+                                    data: data.map(item => item.total_avaliacoes),
+                                    backgroundColor: [
+                                        'rgba(255, 99, 132, 0.5)',
+                                        'rgba(54, 162, 235, 0.5)',
+                                        'rgba(255, 206, 86, 0.5)',
+                                        'rgba(75, 192, 192, 0.5)',
+                                        'rgba(153, 102, 255, 0.5)'
+                                    ]
+                                }]
+                            }
+                        };
+                        break;
+                }
+
+                if (config) {
+                    new Chart(ctx, config);
+                }
+            }
+
+            // Adicionar evento de clique aos cards de relatório
+            reportCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const tipo = this.querySelector('h4').textContent.toLowerCase();
+                    carregarRelatorio(tipo);
+                });
+            });
+
+            // Adicionar evento de clique ao botão filtrar
+            btnFiltrar.addEventListener('click', function() {
+                const cardAtivo = document.querySelector('.report-card.active');
+                if (cardAtivo) {
+                    const tipo = cardAtivo.querySelector('h4').textContent.toLowerCase();
+                    carregarRelatorio(tipo);
+                }
+            });
+        });
+
+        // Função para exportar relatório
+        function exportarRelatorio(tipo) {
+            const table = document.querySelector('.table');
+            const html = table.outerHTML;
+            const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+            const link = document.createElement('a');
+            link.download = `relatorio_${tipo}.xls`;
+            link.href = url;
+            link.click();
+        }
+    </script>
 </body>
 </html> 

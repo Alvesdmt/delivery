@@ -13,18 +13,121 @@ try {
     $pdo = getConnection();
     
     // Buscar contagem de pedidos por status
-    $stmt = $pdo->query("SELECT 
-        COUNT(CASE WHEN status = 'pendente' THEN 1 END) as total_pendentes,
-        COUNT(CASE WHEN status = 'processando' THEN 1 END) as total_processando,
-        COUNT(CASE WHEN status = 'enviado' THEN 1 END) as total_enviados,
-        COUNT(CASE WHEN status = 'entregue' THEN 1 END) as total_entregues,
-        COUNT(CASE WHEN DATE(data) = CURDATE() THEN 1 END) as total_hoje
-    FROM pedidos");
+    $periodo = isset($_GET['periodo']) ? $_GET['periodo'] : 'hoje';
+    $sql_contagem = "SELECT 
+        COUNT(CASE WHEN status = 'pendente' AND ";
+    
+    switch($periodo) {
+        case 'hoje':
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+        case 'ontem':
+            $sql_contagem .= "DATE(data) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+            break;
+        case 'semana':
+            $sql_contagem .= "YEARWEEK(data) = YEARWEEK(CURDATE())";
+            break;
+        case 'mes':
+            $sql_contagem .= "MONTH(data) = MONTH(CURDATE()) AND YEAR(data) = YEAR(CURDATE())";
+            break;
+        default:
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+    }
+    
+    $sql_contagem .= " THEN 1 END) as total_pendentes,
+        COUNT(CASE WHEN status = 'processando' AND ";
+    
+    switch($periodo) {
+        case 'hoje':
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+        case 'ontem':
+            $sql_contagem .= "DATE(data) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+            break;
+        case 'semana':
+            $sql_contagem .= "YEARWEEK(data) = YEARWEEK(CURDATE())";
+            break;
+        case 'mes':
+            $sql_contagem .= "MONTH(data) = MONTH(CURDATE()) AND YEAR(data) = YEAR(CURDATE())";
+            break;
+        default:
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+    }
+    
+    $sql_contagem .= " THEN 1 END) as total_processando,
+        COUNT(CASE WHEN status = 'enviado' AND ";
+    
+    switch($periodo) {
+        case 'hoje':
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+        case 'ontem':
+            $sql_contagem .= "DATE(data) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+            break;
+        case 'semana':
+            $sql_contagem .= "YEARWEEK(data) = YEARWEEK(CURDATE())";
+            break;
+        case 'mes':
+            $sql_contagem .= "MONTH(data) = MONTH(CURDATE()) AND YEAR(data) = YEAR(CURDATE())";
+            break;
+        default:
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+    }
+    
+    $sql_contagem .= " THEN 1 END) as total_enviados,
+        COUNT(CASE WHEN status = 'entregue' AND ";
+    
+    switch($periodo) {
+        case 'hoje':
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+        case 'ontem':
+            $sql_contagem .= "DATE(data) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+            break;
+        case 'semana':
+            $sql_contagem .= "YEARWEEK(data) = YEARWEEK(CURDATE())";
+            break;
+        case 'mes':
+            $sql_contagem .= "MONTH(data) = MONTH(CURDATE()) AND YEAR(data) = YEAR(CURDATE())";
+            break;
+        default:
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+    }
+    
+    $sql_contagem .= " THEN 1 END) as total_entregues,
+        COUNT(CASE WHEN ";
+    
+    switch($periodo) {
+        case 'hoje':
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+        case 'ontem':
+            $sql_contagem .= "DATE(data) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+            break;
+        case 'semana':
+            $sql_contagem .= "YEARWEEK(data) = YEARWEEK(CURDATE())";
+            break;
+        case 'mes':
+            $sql_contagem .= "MONTH(data) = MONTH(CURDATE()) AND YEAR(data) = YEAR(CURDATE())";
+            break;
+        default:
+            $sql_contagem .= "DATE(data) = CURDATE()";
+            break;
+    }
+    
+    $sql_contagem .= " THEN 1 END) as total_hoje
+    FROM pedidos";
+    
+    $stmt = $pdo->query($sql_contagem);
     $contagem = $stmt->fetch();
 
     // Buscar pedidos com filtro
     $filtro = isset($_GET['filtro']) ? $_GET['filtro'] : 'hoje';
-    $sql = "SELECT p.*, c.nome as cliente_nome 
+    $sql = "SELECT p.*, c.nome as cliente_nome, c.telefone 
             FROM pedidos p 
             LEFT JOIN clientes c ON p.cliente_id = c.id";
     
@@ -43,7 +146,23 @@ try {
             break;
         case 'hoje':
         default:
-            $sql .= " WHERE DATE(p.data) = CURDATE()";
+            switch($periodo) {
+                case 'hoje':
+                    $sql .= " WHERE DATE(p.data) = CURDATE()";
+                    break;
+                case 'ontem':
+                    $sql .= " WHERE DATE(p.data) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+                    break;
+                case 'semana':
+                    $sql .= " WHERE YEARWEEK(p.data) = YEARWEEK(CURDATE())";
+                    break;
+                case 'mes':
+                    $sql .= " WHERE MONTH(p.data) = MONTH(CURDATE()) AND YEAR(p.data) = YEAR(CURDATE())";
+                    break;
+                default:
+                    $sql .= " WHERE DATE(p.data) = CURDATE()";
+                    break;
+            }
             break;
     }
     
@@ -294,17 +413,32 @@ require_once 'includes/layout.php';
 
             <!-- Cards do Dashboard -->
             <div class="row mb-4">
+                <div class="col-12 mb-3">
+                    <div class="btn-group" role="group">
+                        <a href="?filtro=hoje&periodo=hoje" class="btn btn-outline-primary <?php echo ($periodo == 'hoje') ? 'active' : ''; ?>">Hoje</a>
+                        <a href="?filtro=hoje&periodo=ontem" class="btn btn-outline-primary <?php echo ($periodo == 'ontem') ? 'active' : ''; ?>">Ontem</a>
+                        <a href="?filtro=hoje&periodo=semana" class="btn btn-outline-primary <?php echo ($periodo == 'semana') ? 'active' : ''; ?>">Esta Semana</a>
+                        <a href="?filtro=hoje&periodo=mes" class="btn btn-outline-primary <?php echo ($periodo == 'mes') ? 'active' : ''; ?>">Este Mês</a>
+                    </div>
+                </div>
                 <div class="col">
-                    <a href="?filtro=hoje" class="text-decoration-none">
+                    <a href="?filtro=hoje&periodo=<?php echo $periodo; ?>" class="text-decoration-none">
                         <div class="dashboard-card">
                             <div class="card-number" id="total-hoje"><?php echo $contagem['total_hoje']; ?></div>
-                            <div class="card-title">Pedidos Hoje</div>
-                            <div class="card-subtitle">Total de pedidos do dia</div>
+                            <div class="card-title">Pedidos <?php 
+                                switch($periodo) {
+                                    case 'hoje': echo 'Hoje'; break;
+                                    case 'ontem': echo 'Ontem'; break;
+                                    case 'semana': echo 'Esta Semana'; break;
+                                    case 'mes': echo 'Este Mês'; break;
+                                }
+                            ?></div>
+                            <div class="card-subtitle">Total de pedidos do período</div>
                         </div>
                     </a>
                 </div>
                 <div class="col">
-                    <a href="?filtro=pendente" class="text-decoration-none">
+                    <a href="?filtro=pendente&periodo=<?php echo $periodo; ?>" class="text-decoration-none">
                         <div class="dashboard-card">
                             <div class="card-number" id="total-pendentes"><?php echo $contagem['total_pendentes']; ?></div>
                             <div class="card-title">Pedidos Pendentes</div>
@@ -313,7 +447,7 @@ require_once 'includes/layout.php';
                     </a>
                 </div>
                 <div class="col">
-                    <a href="?filtro=processando" class="text-decoration-none">
+                    <a href="?filtro=processando&periodo=<?php echo $periodo; ?>" class="text-decoration-none">
                         <div class="dashboard-card">
                             <div class="card-number" id="total-processando"><?php echo $contagem['total_processando']; ?></div>
                             <div class="card-title">Em Processamento</div>
@@ -322,7 +456,7 @@ require_once 'includes/layout.php';
                     </a>
                 </div>
                 <div class="col">
-                    <a href="?filtro=enviado" class="text-decoration-none">
+                    <a href="?filtro=enviado&periodo=<?php echo $periodo; ?>" class="text-decoration-none">
                         <div class="dashboard-card">
                             <div class="card-number" id="total-enviados"><?php echo $contagem['total_enviados']; ?></div>
                             <div class="card-title">Pedidos Enviados</div>
@@ -331,7 +465,7 @@ require_once 'includes/layout.php';
                     </a>
                 </div>
                 <div class="col">
-                    <a href="?filtro=entregue" class="text-decoration-none">
+                    <a href="?filtro=entregue&periodo=<?php echo $periodo; ?>" class="text-decoration-none">
                         <div class="dashboard-card">
                             <div class="card-number" id="total-entregues"><?php echo $contagem['total_entregues']; ?></div>
                             <div class="card-title">Pedidos Entregues</div>
@@ -349,6 +483,7 @@ require_once 'includes/layout.php';
                             <tr>
                                 <th>ID</th>
                                 <th>Cliente</th>
+                                <th>Telefone</th>
                                 <th>Data</th>
                                 <th>Total</th>
                                 <th>Forma de Pagamento</th>
@@ -361,6 +496,7 @@ require_once 'includes/layout.php';
                                 <tr>
                                     <td>#<?php echo $pedido['id']; ?></td>
                                     <td><?php echo htmlspecialchars($pedido['cliente_nome']); ?></td>
+                                    <td><?php echo htmlspecialchars($pedido['telefone']); ?></td>
                                     <td><?php echo date('d/m/Y H:i', strtotime($pedido['data'])); ?></td>
                                     <td>R$ <?php echo number_format($pedido['total'], 2, ',', '.'); ?></td>
                                     <td><?php echo ucfirst($pedido['forma_pagamento']); ?></td>
@@ -382,6 +518,14 @@ require_once 'includes/layout.php';
                                                 data-bs-target="#statusModal"
                                                 data-pedido-id="<?php echo $pedido['id']; ?>">
                                             <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-info"
+                                                title="Imprimir Nota Fiscal"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#imprimirModal"
+                                                data-pedido-id="<?php echo $pedido['id']; ?>">
+                                            <i class="bi bi-printer"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -424,6 +568,42 @@ require_once 'includes/layout.php';
         </div>
     </div>
 
+    <!-- Modal de Impressão -->
+    <div class="modal fade" id="imprimirModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Imprimir Nota Fiscal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="imprimirForm" method="POST">
+                        <input type="hidden" name="pedido_id" id="pedido_id_impressao">
+                        <div class="mb-3">
+                            <label for="tipo_impressao" class="form-label">Tipo de Impressão</label>
+                            <select class="form-select" id="tipo_impressao" name="tipo_impressao" required>
+                                <option value="nota_fiscal">Nota Fiscal</option>
+                                <option value="comprovante">Comprovante de Pedido</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="impressora" class="form-label">Impressora</label>
+                            <select class="form-select" id="impressora" name="impressora" required>
+                                <option value="fiscal">Impressora Fiscal</option>
+                                <option value="termica">Impressora Térmica</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-info" id="downloadNota">Download PDF</button>
+                    <button type="button" class="btn btn-primary" id="imprimirNota">Imprimir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Configuração do WebSocket
@@ -461,6 +641,7 @@ require_once 'includes/layout.php';
                             tr.innerHTML = `
                                 <td>#${pedido.id}</td>
                                 <td>${pedido.cliente_nome}</td>
+                                <td>${pedido.telefone}</td>
                                 <td>${new Date(pedido.data).toLocaleString('pt-BR')}</td>
                                 <td>R$ ${pedido.total.toFixed(2).replace('.', ',')}</td>
                                 <td>${pedido.forma_pagamento.charAt(0).toUpperCase() + pedido.forma_pagamento.slice(1)}</td>
@@ -482,6 +663,14 @@ require_once 'includes/layout.php';
                                             data-bs-target="#statusModal"
                                             data-pedido-id="${pedido.id}">
                                         <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-sm btn-info"
+                                            title="Imprimir Nota Fiscal"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#imprimirModal"
+                                            data-pedido-id="${pedido.id}">
+                                        <i class="bi bi-printer"></i>
                                     </button>
                                 </td>
                             `;
@@ -530,6 +719,75 @@ require_once 'includes/layout.php';
             .catch(error => {
                 console.error('Erro:', error);
                 alert('Erro ao atualizar status');
+            });
+        });
+
+        // Inicializar o modal de impressão
+        const imprimirModal = document.getElementById('imprimirModal');
+        if (imprimirModal) {
+            imprimirModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const pedidoId = button.getAttribute('data-pedido-id');
+                const modalInput = imprimirModal.querySelector('#pedido_id_impressao');
+                modalInput.value = pedidoId;
+            });
+        }
+
+        // Imprimir nota fiscal
+        document.getElementById('imprimirNota').addEventListener('click', function() {
+            const form = document.getElementById('imprimirForm');
+            const formData = new FormData(form);
+            formData.append('acao', 'imprimir');
+            
+            fetch('imprimir_nota.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Nota fiscal enviada para impressão com sucesso!');
+                    const modal = bootstrap.Modal.getInstance(imprimirModal);
+                    modal.hide();
+                } else {
+                    alert('Erro ao imprimir nota fiscal: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao imprimir nota fiscal');
+            });
+        });
+
+        // Download da nota fiscal
+        document.getElementById('downloadNota').addEventListener('click', function() {
+            const form = document.getElementById('imprimirForm');
+            const formData = new FormData(form);
+            formData.append('acao', 'download');
+            
+            fetch('imprimir_nota.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('Erro ao baixar nota fiscal');
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'nota_fiscal.pdf';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao baixar nota fiscal');
             });
         });
     </script>

@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $telefone = filter_input(INPUT_POST, 'telefone', FILTER_SANITIZE_STRING);
         $nome = filter_input(INPUT_POST, 'nome', FILTER_SANITIZE_STRING);
+        $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
 
         // Validação básica
         if (empty($telefone) || strlen($telefone) < 10) {
@@ -44,10 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         // Cliente novo, cadastra
                         $stmt = $pdo->prepare("
-                            INSERT INTO clientes (nome, telefone) 
-                            VALUES (?, ?)
+                            INSERT INTO clientes (nome, telefone, email) 
+                            VALUES (?, ?, ?)
                         ");
-                        $stmt->execute([$nome, $telefone]);
+                        $stmt->execute([$nome, $telefone, empty($email) ? null : $email]);
 
                         $_SESSION['cliente_logado'] = true;
                         $_SESSION['cliente_id'] = $pdo->lastInsertId();
@@ -107,6 +108,12 @@ if (empty($_SESSION['csrf_token'])) {
                                        placeholder="Seu nome completo">
                             </div>
 
+                            <div class="mb-3" id="emailField" style="display: none;">
+                                <label for="email" class="form-label">Email (opcional)</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       placeholder="Seu email (opcional)">
+                            </div>
+
                             <button type="submit" class="btn btn-primary w-100">Continuar</button>
                         </form>
                     </div>
@@ -126,15 +133,21 @@ if (empty($_SESSION['csrf_token'])) {
                 
                 const nomeField = document.getElementById('nomeField');
                 const nomeInput = document.getElementById('nome');
+                const emailField = document.getElementById('emailField');
+                const emailInput = document.getElementById('email');
                 
                 if (!data.exists) {
-                    // Novo usuário, mostra campo de nome
+                    // Novo usuário, mostra campos de nome e email
                     nomeField.style.display = 'block';
                     nomeInput.required = true;
+                    emailField.style.display = 'block';
+                    emailInput.required = false;
                 } else {
-                    // Usuário existente, esconde campo de nome
+                    // Usuário existente, esconde campos de nome e email
                     nomeField.style.display = 'none';
                     nomeInput.required = false;
+                    emailField.style.display = 'none';
+                    emailInput.required = false;
                 }
             }
         });
